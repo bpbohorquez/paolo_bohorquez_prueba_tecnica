@@ -45,7 +45,7 @@ Todos los endpoints (incluyendo el mock del CORE) exigen el header:
 x-api-key: 123456
 ```
 
-En caso de que el header sesa incorrecto, la API devuelve el error `401 Unauthorized` antes de llegar al controlador.
+En caso de que el header sea incorrecto, la API devuelve el error `401 Unauthorized` antes de llegar al controlador.
 
 | Método | Ruta                     | Descripción                                                                                                                 |
 | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
