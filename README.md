@@ -1,6 +1,6 @@
 # API de Gestión de Pólizas — Prueba Técnica — Paolo Bohorquez Sanchez
 
-Implementación del caso técnico : **API de Gestión de Pólizas** con Spring Boot, siguiendo la arquitectura de microservicios y patrón hexagonal, con una separación por capas (`controller` → `service` → `repository`) y aislando la integración con el CORE transaccional legado detrás de un puerto/adapter.
+Implementación del caso técnico: **API de Gestión de Pólizas** con Spring Boot, con base en arquitectura de microservicios y patrón hexagonal, separación por capas (`controller` → `service` → `repository`) e integración con el CORE transaccional legado detrás de un puerto/adapter.
 
 ## Stack técnico
 
@@ -34,8 +34,8 @@ api-polizas/
 
 ## Modelo de datos
 
-- **Poliza**: `tipo` (INDIVIDUAL/COLECTIVA), `estado` (ACTIVA/RENOVADA/CANCELADA), `tomador`, vigencia (`fechaInicioVigencia`, `fechaFinVigencia`, `mesesVigencia`), `canonMensual`, `prima`. El canon y la prima son exclusivos de la póliza (no se duplican por riesgo).
-- **Riesgo**: entidad hija de `Poliza` (relación `1—N`). Contiene `asegurado` (arrendatario), `beneficiario` (arrendador), `inmueble` y `estado` (ACTIVO/CANCELADO).
+- **Póliza**: `tipo` (INDIVIDUAL/COLECTIVA), `estado` (ACTIVA/RENOVADA/CANCELADA), `tomador`, vigencia (`fechaInicioVigencia`, `fechaFinVigencia`, `mesesVigencia`), `canonMensual`, `prima`.
+- **Riesgo**: Entidad hija de `Poliza` (relación `1—N`). Contiene `asegurado` (arrendatario), `beneficiario` (arrendador), `inmueble` y `estado` (ACTIVO/CANCELADO).
 
 ## Endpoints
 
@@ -59,7 +59,7 @@ En caso de que el header sesa incorrecto, la API devuelve el error `401 Unauthor
 
 ### Lógica del negocio aplicada
 
-- Una póliza **individual** solo puede tener 1 riesgo (por eso solo las **colectivas** aceptan `POST /polizas/{id}/riesgos`).
+- Una póliza **individual** solo puede tener 1 riesgo (solo las pólizas **colectivas** aceptan `POST /polizas/{id}/riesgos`).
 - No se puede renovar una póliza `CANCELADA`.
 - Cancelar una póliza cancela **todos** sus riesgos activos.
 - Agregar un riesgo valida el tipo de póliza (`COLECTIVA`) y que la póliza no esté cancelada.
@@ -70,26 +70,26 @@ En caso de que el header sesa incorrecto, la API devuelve el error `401 Unauthor
 ```powershell
 $h = @{ "x-api-key" = "123456" }
 
-# Listar pólizas colectivas activas
+# Listar pólizas colectivas activas (GET /polizas)
 Invoke-RestMethod -Uri "http://localhost:8080/polizas?tipo=COLECTIVA&estado=ACTIVA" -Headers $h
 
-# Listar los riesgos de la póliza 2
+# Listar los riesgos de la póliza 2 (GET /polizas/{id}/riesgos)
 Invoke-RestMethod -Uri "http://localhost:8080/polizas/2/riesgos" -Headers $h
 
-# Renovar la póliza 1
+# Renovar la póliza 1 (POST /polizas/{id}/renovar)
 Invoke-RestMethod -Uri "http://localhost:8080/polizas/1/renovar" -Method Post -ContentType "application/json" -Headers $h
 
-# Cancelar la póliza 2 (cancela también todos sus riesgos)
+# Cancelar la póliza 2 (cancela también todos sus riesgos) (POST /polizas/{id}/cancelar)
 Invoke-RestMethod -Uri "http://localhost:8080/polizas/2/cancelar" -Method Post -ContentType "application/json" -Headers $h
 
-# Agregar un riesgo a la póliza colectiva 2
+# Agregar un riesgo a la póliza colectiva 2 (POST /polizas/{id}/riesgos)
 Invoke-RestMethod -Uri "http://localhost:8080/polizas/2/riesgos" -Method Post -ContentType "application/json" -Headers $h `
   -Body '{"asegurado":"Nuevo Arrendatario","beneficiario":"Nuevo Arrendador","inmueble":"Apto 900"}'
 
-# Cancelar el riesgo 1
+# Cancelar el riesgo 1 (POST /riesgos/{id}/cancelar)
 Invoke-RestMethod -Uri "http://localhost:8080/riesgos/1/cancelar" -Method Post -ContentType "application/json" -Headers $h
 
-# Mock del CORE
+# Mock del CORE (POST /core-mock/evento)
 Invoke-RestMethod -Uri "http://localhost:8080/core-mock/evento" -Method Post -ContentType "application/json" -Headers $h `
   -Body '{"evento":"ACTUALIZACION","polizaId":555}'
 ```
@@ -97,8 +97,30 @@ Invoke-RestMethod -Uri "http://localhost:8080/core-mock/evento" -Method Post -Co
 Equivalente en `curl`:
 
 ```bash
-curl -H "x-api-key: 123456" "http://localhost:8080/polizas?tipo=COLECTIVA"
-curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" http://localhost:8080/polizas/1/renovar
+# Listar pólizas colectivas activas (GET /polizas)
+curl -H "x-api-key: 123456" "http://localhost:8080/polizas?tipo=COLECTIVA&estado=ACTIVA"
+
+# Listar los riesgos de la póliza 2 (GET /polizas/{id}/riesgos)
+curl -H "x-api-key: 123456" "http://localhost:8080/polizas/2/riesgos"
+
+# Renovar la póliza 1 (POST /polizas/{id}/renovar)
+curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" "http://localhost:8080/polizas/1/renovar"
+
+# Cancelar la póliza 2 (cancela también todos sus riesgos) (POST /polizas/{id}/cancelar)
+curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" "http://localhost:8080/polizas/2/cancelar"
+
+# Agregar un riesgo a la póliza colectiva 2 (POST /polizas/{id}/riesgos)
+curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" \
+  -d '{"asegurado":"Nuevo Arrendatario","beneficiario":"Nuevo Arrendador","inmueble":"Apto 900"}' \
+  "http://localhost:8080/polizas/2/riesgos"
+
+# Cancelar el riesgo 1 (POST /riesgos/{id}/cancelar)
+curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" "http://localhost:8080/riesgos/1/cancelar"
+
+# Mock del CORE (POST /core-mock/evento)
+curl -X POST -H "x-api-key: 123456" -H "Content-Type: application/json" \
+  -d '{"evento":"ACTUALIZACION","polizaId":555}' \
+  "http://localhost:8080/core-mock/evento"
 ```
 
 ## Cómo ejecutar
@@ -125,6 +147,18 @@ Ejecutar el sistema:
 ```
 
 La API se ejecuta en `http://localhost:8080`.
+
+### Ejecutar endpoints
+
+```bash
+# PowerShell
+Invoke-RestMethod -Uri "http://localhost:8080/polizas?tipo=COLECTIVA&estado=ACTIVA" -Headers $h
+...
+
+# curl
+curl -H "x-api-key: 123456" "http://localhost:8080/polizas?tipo=COLECTIVA&estado=ACTIVA"
+...
+```
 
 ### Ejecutar las pruebas
 
